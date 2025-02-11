@@ -24,7 +24,7 @@ export const uploadOnCloudinary = async (localFilePath) => {
     console.log(response);
 
     // DELETING FILE FROM TEMP FOLDER
-    fs.unlink(localFilePath);
+    fs.unlinkSync(localFilePath);
   } catch (error) {
     fs.existsSync(localFilePath) && fs.unlink(localFilePath);
 
