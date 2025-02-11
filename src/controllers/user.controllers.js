@@ -197,6 +197,60 @@ const updateUserDetails = asyncHandler(async (req, res) => {
     .status(400)
     .json(new ApiResponse(400, {}, "User Details Updated successfully !!"));
 });
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  let incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+  if (!incomingRefreshToken) throw new ApiError(400, "UNAUTHORISED REQUEST");
+
+  try {
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN
+    );
+    if (!decodedToken) throw new ApiError(400, "Unauthorised TOKEN");
+
+    const user = await User.findById(decodedToken?._id);
+    if (!user) {
+      throw new ApiError(401, "INVALID REFRESH TOKEN ");
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh Token is expired or used");
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+      user?._id
+    );
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(200, user, "Access Token Refreshed successfully!!")
+      );
+  } catch (error) {
+    throw new ApiError(401, error?.message || "INVALID REFRESH TOKEN");
+  }
+});
+
+const getUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user?._id).select(
+    "-password, -refreshToken"
+  );
+
+  if (!user) throw new ApiError(400, "User doesn't Exist");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User Details Fetched Successfully"));
+});
 export {
   register,
   login,
@@ -204,4 +258,6 @@ export {
   changePassword,
   updateAvatar,
   updateUserDetails,
+  refreshAccessToken,
+  getUserProfile
 };
