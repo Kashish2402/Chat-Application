@@ -1,8 +1,9 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
-import { User } from "../models/users.models";
+import { User } from "../models/users.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -10,8 +11,8 @@ const generateAccessAndRefreshToken = async (userId) => {
     const user = await User.findById(userId);
 
     // GENERATING TOKENS AND SAVING TO DATABASE
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
+    const accessToken = await user.generateAccessToken();
+    const refreshToken = await user.generateRefreshToken();
 
     user.accessToken = accessToken;
     user.refreshToken = refreshToken;
@@ -28,9 +29,9 @@ const generateAccessAndRefreshToken = async (userId) => {
 };
 
 const register = asyncHandler(async (req, res) => {
-  const { fullName, username, password } = req.body;
+  const { fullName, email, password } = req.body;
 
-  if (!(fullName && username && password))
+  if (!(fullName && email && password))
     throw new ApiError(400, "Full name, username, password required...");
 
   const existingUser = await User.findOne({ email });
@@ -60,9 +61,8 @@ const login = asyncHandler(async (req, res) => {
   if (!(email || password)) throw new ApiError(400, "Email,Password Required");
 
   const user = await User.findOne({ email });
-
+  if (!user) throw new ApiResponse(404, "User not found");
   const validatePassword = await user.isPasswordCorrect(password);
-
   if (!validatePassword) throw new ApiError(400, "Wrong Password");
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
@@ -93,7 +93,7 @@ const login = asyncHandler(async (req, res) => {
 
 const logout = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
-    req.user._id,
+    req.user?._id,
     {
       $unset: {
         refreshToken: 1,
@@ -145,11 +145,10 @@ const changePassword = asyncHandler(async (req, res) => {
 });
 
 const updateAvatar = asyncHandler(async (req, res) => {
-  const { profilpic } = req.body;
+  const profilepic = req.file?.path;
+  if (!profilepic) throw new ApiError(404, "File not found");
 
-  if (!profilpic) throw new ApiError(404, "File not found");
-
-  const image = await uploadOnCloudinary(profilpic);
+  const image = await uploadOnCloudinary(profilepic);
 
   if (!image)
     throw new ApiError(
@@ -259,5 +258,5 @@ export {
   updateAvatar,
   updateUserDetails,
   refreshAccessToken,
-  getUserProfile
+  getUserProfile,
 };
