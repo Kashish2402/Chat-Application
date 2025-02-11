@@ -3,16 +3,26 @@ import mongoose, { Schema } from "mongoose";
 const messageSchema = new Schema(
   {
     senderId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref:"User",
       required: true,
     },
     recieverId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref:"User",
       required: true,
     },
     content: {
       type: String,
-      required: true,
+    },
+    image: {
+      type: String,
+    },
+    video: {
+      type: String,
+    },
+    audio: {
+      type: String,
     },
   },
   {
