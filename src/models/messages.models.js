@@ -15,15 +15,10 @@ const messageSchema = new Schema(
     content: {
       type: String,
     },
-    image: {
+    media: {
       type: String,
     },
-    video: {
-      type: String,
-    },
-    audio: {
-      type: String,
-    },
+   
   },
   {
     timestamps: true,
